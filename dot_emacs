@@ -1,0 +1,180 @@
+(require 'package)
+;; Added by Package.el.  This must come before configurations of
+;; installed packages.  Don't delete this line.  If you don't want it,
+;; just comment it out by adding a semicolon to the start of the line.
+;; You may delete these explanatory comments.
+(package-initialize)
+
+(add-to-list 'package-archives
+	     '("melpa" . "http://melpa.org/packages/") t)
+
+(setq backup-directory-alist '(("" . "~/.emacs.d/backup")))
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(blink-cursor-delay 0)
+ '(blink-cursor-mode t)
+ '(custom-safe-themes
+   '("a24c5b3c12d147da6cef80938dca1223b7c7f70f2f382b26308eba014dc4833a" default))
+ '(haskell-interactive-popup-errors nil)
+ '(package-selected-packages
+   '(rust-mode cmake-mode company lsp-mode dockerfile-mode git-timemachine git-messenger magit hydra gnu-elpa-keyring-update ccls use-package lsp-ui company-lsp material-theme yaml-mode lsp-haskell haskell-mode lsp-treemacs dap-mode flycheck projectile)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+
+;; BASIC CUSTOMIZATION
+;; --------------------------------------
+
+
+(load-theme 'misterioso t) ;; load material theme
+(setq inhibit-startup-message t)
+(setq scroll-step 1)
+(fset 'yes-or-no-p 'y-or-n-p)
+(setq next-line-add-newlines nil)
+(setq-default
+ whitespace-line-column 80
+ whitespace-style       '(face spaces tabs newline
+                               space-mark tab-mark newline-mark
+                               lines-tail empty))
+
+
+
+
+
+;; MAGIT
+(use-package git-messenger :ensure t)
+(use-package git-timemachine :ensure t)
+(use-package magit
+  :ensure t
+  :config
+  (global-set-key (kbd "C-x g") 'magit-status))
+
+;; lsp
+(use-package lsp-mode :ensure t :commands lsp
+  :config
+  (setq lsp-clients-clangd-executable "/usr/bin/clangd-13"
+	lsp-clients-clangd-args '("-j=4" "-background-index" "-log=error")
+	lsp-prefer-flymake nil
+	lsp-enable-snippet nil
+	lsp-rust-analyzer-server-display-inlay-hints t
+	)
+  (add-hook 'lsp-mode-hook
+            (lambda ()
+              (local-set-key (kbd "M-;") 'lsp-find-references)
+	      (local-set-key (kbd "C-c l") 'lsp-hydra/body)
+              ))
+  :hook ((c-mode c++-mode python-mode haskell-mode rust-mode) . lsp))
+
+;; haskell
+(use-package haskell-mode
+  :config
+  (add-hook 'lsp-mode-hook
+            (lambda ()
+	      (local-set-key (kbd "C-c C-l") 'haskell-process-load-or-reload)
+	      (local-set-key (kbd "C-c C-z") 'haskell-interactive-switch)
+	      (local-set-key (kbd "C-c C-b") 'haskell-process-cabal-build)
+              ))
+  )
+
+
+  
+;;;; lsp extras
+(use-package lsp-ui
+  :ensure t
+  :commands lsp-ui-mode
+  :config (setq lsp-ui-doc-enable nil)
+  )
+;;  :config
+;;  (setq lsp-ui-sideline-ignore-duplicate t)
+;;  (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+;;;;
+(use-package company-lsp
+  :after lsp-mode
+  :commands company-lsp)
+
+;; optionally
+(use-package lsp-ui
+  :after lsp-mode
+  :commands lsp-ui-mode)
+
+;;;; if you are helm user
+;;(use-package helm-lsp :commands helm-lsp-workspace-symbol)
+;;;; if you are ivy user
+;;(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+
+(use-package lsp-treemacs
+  :after lsp-mode
+  :commands lsp-treemacs-errors-list)
+
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode t))
+
+;; C/C++
+(use-package cc-mode
+  :hook (c-mode-common . (lambda ()
+                           (c-set-style "k&r")
+                           (setq indent-tabs-mode nil
+				 c-basic-offset 2
+				 tab-width 2
+				 indent-tabs-mode nil))))
+
+                           
+;; hydra
+(use-package hydra :ensure t
+  :config
+  (setq hydra-is-helpful t
+	hydra-lv t
+	lv-use-separator t))
+
+(defhydra magit-hydra (:color blue)
+  "Magit"
+  ("w" git-messenger:popup-message "blame line" :column "Immuting")
+  ("a" vc-annotate "annotate file")
+  ("d" magit-diff-working-tree "diff" )
+  ("s" magit-status "status")
+  ("l" magit-log "log")
+  ("t" git-timemachine "time machine")
+  ("b" magit-checkout "checkout" :column "Mutating")
+  ("B" magit-branch-manager "branch mgr")
+  ("c" vc-next-action "commit")
+  ("e" magit-interactive-rebase "rebase"))
+(global-set-key (kbd "C-c g") 'magit-hydra/body)
+
+
+;; LSP hydra
+(defhydra lsp-hydra (global-map "C-c l" :color blue)
+  "LSP"
+  ("d" xref-find-definitions "Definitions" :column "Xref")
+  ("D" xref-find-definitions-other-window "-> other win")
+  ("r" xref-find-references "References")
+
+  ;; Peek
+  ("C-d" lsp-ui-peek-find-definitions "Definitions" :column "Peek")
+  ("C-r" lsp-ui-peek-find-references "References")
+  ("C-i" lsp-ui-peek-find-implementation "Implementation")
+
+  ;; LSP
+  ("p" lsp-describe-thing-at-point "Describe at point" :column "LSP")
+  ("C-a" lsp-execute-code-action "Execute code action")
+  ("R" lsp-rename "Rename")
+  ("t" lsp-goto-type-definition "Type definition")
+  ("i" lsp-goto-implementation "Implementation")
+  ("f" helm-imenu "Filter funcs/classes (Helm)")
+  ("C-c" lsp-describe-session "Describe session")
+
+  ;; Flycheck
+  ("l" lsp-ui-flycheck-list "List errs/warns/notes" :column "Flycheck")
+
+  ("q" nil "Cancel" :column "Misc")
+  ("b" pop-tag-mark "Back"))
+
+
+(put 'narrow-to-region 'disabled nil)
