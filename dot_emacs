@@ -59,7 +59,7 @@
 ;; lsp
 (use-package lsp-mode :ensure t :commands lsp
   :config
-  (setq lsp-clients-clangd-executable "/usr/bin/clangd-13"
+  (setq lsp-clients-clangd-executable "/usr/bin/clangd"
 	lsp-clients-clangd-args '("-j=4" "-background-index" "-log=error")
 	lsp-prefer-flymake nil
 	lsp-enable-snippet nil
