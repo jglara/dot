@@ -55,6 +55,16 @@ Expected project files:
 - Open status: `M-x magit-status`
 - Use Projectile to jump between repos and files with `C-c p ...`
 
+## Projectile Cheat Sheet
+
+- `C-c p f` -> find file in project
+- `C-c p s g` -> ripgrep search in project
+- `C-c p p` -> switch projects
+- `C-c p r` -> recent files in project
+- `C-c p k` -> kill all project buffers
+- `C-c p d` -> open project root directory
+- Project roots are detected via `.git` or common build files; add a `.projectile` file at the root if needed.
+
 ## Notes
 
 - On Emacs 29+, this setup works well in TTY sessions (tmux/SSH/local terminal).

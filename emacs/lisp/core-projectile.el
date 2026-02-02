@@ -14,3 +14,4 @@
 ;;(use-package counsel :after projectile)   ;; if you use ivy/counsel
 ;;(use-package ivy :config (ivy-mode 1))    ;; optional UI
 
+(provide 'core-projectile)

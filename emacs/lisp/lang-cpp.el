@@ -5,6 +5,10 @@
   (setq c-basic-offset 4)
   (setq c-default-style "linux"))
 
+;; CMake files
+(use-package cmake-mode
+  :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
+
 ;; Formatting
 (use-package clang-format)
 
@@ -28,3 +32,4 @@
           "--clang-tidy"
           "--completion-style=detailed")))
 
+(provide 'lang-cpp)

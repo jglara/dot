@@ -23,3 +23,4 @@
 
 (use-package flycheck)
 
+(provide 'core-packages)

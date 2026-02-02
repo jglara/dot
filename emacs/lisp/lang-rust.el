@@ -15,3 +15,5 @@
           (lambda ()
             (when (bound-and-true-p my-format-on-save)
               (add-hook 'before-save-hook #'my-rust-format-buffer nil t))))
+
+(provide 'lang-rust)

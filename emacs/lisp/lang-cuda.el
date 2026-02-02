@@ -12,3 +12,4 @@
             (when (bound-and-true-p my-format-on-save)
               (add-hook 'before-save-hook #'my-cpp-format-buffer nil t))))
 
+(provide 'lang-cuda)

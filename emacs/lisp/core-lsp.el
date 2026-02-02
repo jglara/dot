@@ -9,7 +9,8 @@
   (setq lsp-enable-file-watchers t)
   (setq lsp-file-watch-threshold 2000)
   (setq lsp-file-watch-ignored-directories
-        (append lsp-file-watch-ignored-directories
+        (append (and (boundp 'lsp-file-watch-ignored-directories)
+                     lsp-file-watch-ignored-directories)
                 '("[/\\\\]build\\'"
                   "[/\\\\]\\.venv\\'"
                   "[/\\\\]target\\'")))
@@ -32,3 +33,5 @@
 
 (use-package yasnippet
   :config (yas-global-mode 1))
+
+(provide 'core-lsp)
