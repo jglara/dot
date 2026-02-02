@@ -19,6 +19,11 @@
 (setq auto-save-default nil)
 (global-display-line-numbers-mode 1)
 
+;; Suppress byte-compilation warnings during startup
+(setq byte-compile-warnings nil)
+(setq warning-minimum-level :emergency)
+(setq y-or-n-p-as-yes-or-no nil)
+
 ;; Terminal-friendly theme
 (use-package zenburn-theme
   :config
