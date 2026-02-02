@@ -1,0 +1,16 @@
+# Emacs
+*.elc
+auto-save-list/
+backup/
+elpa/
+straight/
+eln-cache/
+var/
+recentf
+savehist
+places
+transient/
+tramp
+projectile.cache
+.projectile
+url/cache/
