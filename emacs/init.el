@@ -10,6 +10,8 @@
 (require 'lang-cuda)
 (require 'lang-python)
 (require 'lang-rust)
+(require 'lang-markdown)
+(require 'lang-yaml)
 
 ;; Small, useful defaults
 (setq inhibit-startup-screen t)
