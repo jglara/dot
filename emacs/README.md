@@ -45,10 +45,11 @@ Expected project files:
 - `C-c m p s` -> `uv sync`
 - `C-c m p t` -> `uv run -m pytest`
 - `C-c m p r` -> prompt for custom `uv run ...` command
+- LSP: install `pyright` (e.g., `npm i -g pyright` or `pipx install pyright`)
 
 Expected project files:
-- `pyproject.toml` at project root
-- Optional `.venv/` at project root (auto-activated in `python-mode`)
+- `pyproject.toml` in the project or a subdir; commands auto-detect the nearest one from the current buffer and will prompt if none is found
+- Optional `.venv/` next to `pyproject.toml` (auto-activated in `python-mode`)
 
 ## Git Workflow
 

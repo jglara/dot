@@ -14,3 +14,5 @@ tramp
 projectile.cache
 .projectile
 url/cache/
+.lsp-session-v1
+emacs/projectile-bookmarks.eld

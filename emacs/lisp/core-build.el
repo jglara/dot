@@ -137,22 +137,37 @@
     (compile "cargo clippy")))
 
 (defun my-dev-uv-sync ()
-  "Run `uv sync` from project root."
+  "Run `uv sync` from the nearest pyproject.toml."
   (interactive)
-  (let ((default-directory (file-truename (my-dev-project-root))))
+  (let ((default-directory (file-truename (my-dev--uv-project-root t))))
     (compile "uv sync")))
 
 (defun my-dev-uv-test ()
-  "Run `uv run -m pytest` from project root."
+  "Run `uv run -m pytest` from the nearest pyproject.toml."
   (interactive)
-  (let ((default-directory (file-truename (my-dev-project-root))))
+  (let ((default-directory (file-truename (my-dev--uv-project-root t))))
     (compile "uv run -m pytest")))
 
 (defun my-dev-uv-run (cmd)
-  "Run arbitrary CMD under uv."
+  "Run arbitrary CMD under uv from the nearest pyproject.toml."
   (interactive "suv run ...: ")
-  (let ((default-directory (file-truename (my-dev-project-root))))
+  (let ((default-directory (file-truename (my-dev--uv-project-root t))))
     (compile (format "uv run %s" cmd))))
+
+(defun my-dev--uv-project-root (&optional prompt)
+  "Return directory containing pyproject.toml.
+
+If PROMPT is non-nil and none is found, prompt for a path."
+  (let ((found (locate-dominating-file default-directory "pyproject.toml")))
+    (cond
+     (found (file-truename found))
+     (prompt
+      (let* ((start (file-truename (my-dev-project-root)))
+             (file (read-file-name "pyproject.toml: " start nil t "pyproject.toml")))
+        (unless (and (stringp file) (file-exists-p file))
+          (user-error "No pyproject.toml selected"))
+        (file-name-directory (file-truename file))))
+     (t nil))))
 
 (defvar my-dev-command-map
   (let ((map (make-sparse-keymap)))

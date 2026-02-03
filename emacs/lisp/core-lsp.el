@@ -17,7 +17,7 @@
   ;; keep it sane with big repos
   (setq read-process-output-max (* 1024 1024)) ; 1MB
   :hook
-  ((c-mode c++-mode cuda-mode rust-mode) . lsp-deferred)
+  ((c-mode c++-mode cuda-mode rust-mode python-mode python-ts-mode) . lsp-deferred)
   :commands (lsp lsp-deferred))
 
 (use-package lsp-ui

@@ -12,8 +12,10 @@
       default-directory))
 
 (defun my-uv-auto-activate-venv ()
-  "If PROJECT/.venv exists, activate it (pyvenv) and set python shell."
-  (let* ((root (file-truename (my-project-root)))
+  "If .venv exists near pyproject.toml, activate it and set python shell."
+  (let* ((root (file-truename
+                (or (locate-dominating-file default-directory "pyproject.toml")
+                    (my-project-root))))
          (venv (expand-file-name ".venv" root)))
     (when (file-directory-p venv)
       (pyvenv-activate venv)
@@ -27,10 +29,15 @@
   (setq lsp-pyright-python-executable-cmd "python")
   (setq lsp-pyright-typechecking-mode "basic"))
 
+(defun my-python--lsp-setup ()
+  "Ensure Pyright is loaded, then start LSP."
+  (require 'lsp-pyright)
+  (lsp-deferred))
+
 (use-package lsp-pyright
-  :after lsp-mode
-  :hook (python-mode . (lambda ()
-                         (require 'lsp-pyright)
-                         (lsp-deferred))))
+  :after lsp-mode)
+
+(add-hook 'python-mode-hook #'my-python--lsp-setup)
+(add-hook 'python-ts-mode-hook #'my-python--lsp-setup)
 
 (provide 'lang-python)
