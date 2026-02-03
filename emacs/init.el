@@ -5,6 +5,7 @@
 (require 'core-projectile)
 (require 'core-lsp)
 (require 'core-build)
+(require 'core-code-review)
 
 (require 'lang-cpp)
 (require 'lang-cuda)
@@ -81,7 +82,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(cmake-mode zenburn-theme yasnippet which-key rust-mode ripgrep pyvenv projectile magit lsp-ui lsp-pyright flycheck cuda-mode company clang-format)))
+   '(cmake-mode code-review forge zenburn-theme yasnippet which-key rust-mode ripgrep pyvenv projectile magit lsp-ui lsp-pyright flycheck cuda-mode company clang-format)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

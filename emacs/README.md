@@ -55,6 +55,27 @@ Expected project files:
 - Open status: `M-x magit-status`
 - Use Projectile to jump between repos and files with `C-c p ...`
 
+## Code Review (Magit + Forge + code-review)
+
+Open or create a Merge Request (MR) / Pull Request (PR):
+- `M-x magit-status` in the repo.
+- `N f f` (`forge-pull`) to fetch topics; this adds `Pull requests` to the status buffer. citeturn1search7
+- Open an existing MR/PR: move point to a PR in `Pull requests` and press `RET` to visit it in a topic buffer. citeturn1search5
+- Create a new MR/PR: move point to the `Pull requests` section header and press `C-c C-n`. citeturn0search2
+
+Review and send comments with `code-review`:
+- Start a review from a URL: `M-x code-review-start`. citeturn0search0
+- Or, in a Forge topic buffer, start the review UI with `M-x code-review-forge-pr-at-point`. citeturn0search0
+- Add a comment on a hunk with `RET`, write it, then submit with `C-c C-c`. citeturn0search0
+- Add a reply on an existing comment with `RET`, then submit with `C-c C-c`. citeturn0search0
+
+Forge GitLab auth (token from `glab auth status -t`):
+- Add a line to `~/.authinfo.gpg` (or `~/.authinfo`) like:
+  - `machine gitlab.com login <gitlab-username> password <token>`
+- Restart Emacs, then run `M-x forge-pull` to verify access.
+- For self-hosted GitLab, replace `gitlab.com` with your instance host.
+- If you use `~/.authinfo.gpg`, ensure GPG is working in your terminal session so Emacs can decrypt it (e.g., `gpg -k` prompts succeed, and `pinentry` is available).
+
 ## Projectile Cheat Sheet
 
 - `C-c p f` -> find file in project
