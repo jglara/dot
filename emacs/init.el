@@ -1,4 +1,7 @@
 ;; ~/.emacs.d/init.el
+;; Prefer newer .el files over stale .elc files in this dotfiles repo.
+(setq load-prefer-newer t)
+
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
 (require 'core-packages)

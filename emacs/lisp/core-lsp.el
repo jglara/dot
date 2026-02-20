@@ -20,6 +20,11 @@
   ((c-mode c++-mode cuda-mode rust-mode python-mode python-ts-mode) . lsp-deferred)
   :commands (lsp lsp-deferred))
 
+(with-eval-after-load 'lsp-mode
+  ;; Avoid noisy startup errors when semgrep CLI is not installed.
+  (add-to-list 'lsp-disabled-clients 'semgrep-ls)
+  (add-to-list 'lsp-disabled-clients 'semgrep-ls-tramp))
+
 (use-package lsp-ui
   :after lsp-mode
   :init

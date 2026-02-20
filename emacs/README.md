@@ -103,3 +103,15 @@ PlantUML (CLI):
 - Render `.puml` to PDF:
   - `plantuml -tpdf diagram.puml`
 - Output PDF is created next to the source file.
+
+## Quarto Markdown Slides (`.qmd`)
+
+Quarto files now open in `markdown-mode`.
+
+In any markdown/quarto buffer:
+- `C-c q n` -> create a new Quarto slide file with a starter `revealjs` template
+- `C-c q s` -> insert a Quarto slide template at point
+- `C-c q r` -> run `quarto render <current-file>`
+
+Prerequisite:
+- Install Quarto CLI and ensure `quarto` is on your `PATH`.
