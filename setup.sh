@@ -12,6 +12,7 @@ WITH_CHROME=0
 OS_ID=""
 OS_CODENAME=""
 ARCH=""
+TARGET_USER=""
 
 APT_PACKAGES=(
   bash-completion
@@ -122,7 +123,16 @@ require_ubuntu_or_debian() {
   fi
 
   ARCH="$(dpkg --print-architecture)"
+
+  if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+    TARGET_USER="$SUDO_USER"
+  elif [ -n "${LOGNAME:-}" ] && [ "${LOGNAME}" != "root" ]; then
+    TARGET_USER="$LOGNAME"
+  else
+    TARGET_USER="$(id -un)"
+  fi
 }
+
 
 need_sudo() {
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -212,11 +222,11 @@ install_docker() {
     run sudo groupadd docker
   fi
 
-  if id -nG "$USER" | tr ' ' '\n' | grep -Fxq docker; then
-    log "user $USER already in docker group"
+  if id -nG "$TARGET_USER" | tr ' ' '\n' | grep -Fxq docker; then
+    log "user $TARGET_USER already in docker group"
   else
-    log "adding $USER to docker group"
-    run sudo usermod -aG docker "$USER"
+    log "adding $TARGET_USER to docker group"
+    run sudo usermod -aG docker "$TARGET_USER"
     log "log out and back in to use docker without sudo"
   fi
 
