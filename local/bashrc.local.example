@@ -1,0 +1,9 @@
+# Local shell overrides.
+# This file is copied to ~/.bashrc.local if it does not already exist.
+
+# Example CUDA setup:
+# export CUDA_HOME="/usr/local/cuda-12.3"
+# export PATH="$CUDA_HOME/bin:$PATH"
+
+# Example aliases:
+# alias q='QHOME=~/q rlwrap -r ~/q/l64/q'
