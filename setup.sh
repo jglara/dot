@@ -7,6 +7,8 @@ DRY_RUN=0
 PACKAGES_ONLY=0
 DOTFILES_ONLY=0
 FORCE=0
+WITH_BRAVE=0
+WITH_CHROME=0
 OS_ID=""
 OS_CODENAME=""
 ARCH=""
@@ -66,6 +68,8 @@ Options:
   --dry-run        Print actions without making changes
   --packages-only  Install packages and toolchains only
   --dotfiles-only  Create local examples and symlink dotfiles only
+  --with-brave     Install Brave Browser from Brave's official apt repository
+  --with-chrome    Install Google Chrome from Google's official apt repository
   --force          Replace conflicting files without keeping a backup
   -h, --help       Show this help
 USAGE
@@ -91,14 +95,6 @@ run_shell() {
     return 0
   fi
   bash -lc "$*"
-}
-
-run_sudo_shell() {
-  if [ "$DRY_RUN" -eq 1 ]; then
-    printf '[dry-run] sudo bash -lc %q\n' "$*"
-    return 0
-  fi
-  sudo bash -lc "$*"
 }
 
 require_ubuntu_or_debian() {
@@ -170,7 +166,8 @@ ensure_docker_repo() {
 
   if [ "$DRY_RUN" -eq 1 ]; then
     printf '[dry-run] sudo install -m 0755 -d /etc/apt/keyrings\n'
-    printf '[dry-run] curl -fsSL https://download.docker.com/linux/%s/gpg | sudo gpg --dearmor? no, using ascii keyring at %s\n' "$OS_ID" "$keyring"
+    printf '[dry-run] curl -fsSL https://download.docker.com/linux/%s/gpg | sudo tee %s >/dev/null\n' "$OS_ID" "$keyring"
+    printf '[dry-run] sudo chmod a+r %s\n' "$keyring"
     printf '[dry-run] sudo tee %s >/dev/null <<< %q\n' "$repo_file" "$repo_line"
     return 0
   fi
@@ -228,6 +225,80 @@ install_docker() {
   else
     printf '[dry-run] sudo systemctl enable --now docker\n'
   fi
+}
+
+ensure_brave_repo() {
+  local keyring='/usr/share/keyrings/brave-browser-archive-keyring.gpg'
+  local repo_file='/etc/apt/sources.list.d/brave-browser-release.sources'
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] sudo curl -fsSLo %s https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg\n' "$keyring"
+    printf '[dry-run] sudo curl -fsSLo %s https://brave-browser-apt-release.s3.brave.com/brave-browser.sources\n' "$repo_file"
+    return 0
+  fi
+
+  sudo curl -fsSLo "$keyring" https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+  sudo curl -fsSLo "$repo_file" https://brave-browser-apt-release.s3.brave.com/brave-browser.sources
+}
+
+install_brave() {
+  ensure_brave_repo
+
+  if dpkg -s brave-browser >/dev/null 2>&1; then
+    log "brave-browser already installed"
+    return 0
+  fi
+
+  log "installing brave-browser"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] sudo apt-get update\n'
+    printf '[dry-run] sudo apt-get install -y brave-browser\n'
+    return 0
+  fi
+
+  sudo apt-get update
+  sudo apt-get install -y brave-browser
+}
+
+ensure_chrome_repo() {
+  local keyring='/usr/share/keyrings/google-linux.gpg'
+  local repo_file='/etc/apt/sources.list.d/google-chrome.list'
+  local repo_line='deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux.gpg] https://dl.google.com/linux/chrome/deb/ stable main'
+
+  if [ "$ARCH" != 'amd64' ]; then
+    printf 'Google Chrome install is only supported by this script on amd64\n' >&2
+    exit 1
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee %s >/dev/null\n' "$keyring"
+    printf '[dry-run] sudo chmod a+r %s\n' "$keyring"
+    printf '[dry-run] sudo tee %s >/dev/null <<< %q\n' "$repo_file" "$repo_line"
+    return 0
+  fi
+
+  curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee "$keyring" >/dev/null
+  sudo chmod a+r "$keyring"
+  printf '%s\n' "$repo_line" | sudo tee "$repo_file" >/dev/null
+}
+
+install_chrome() {
+  ensure_chrome_repo
+
+  if dpkg -s google-chrome-stable >/dev/null 2>&1; then
+    log "google-chrome-stable already installed"
+    return 0
+  fi
+
+  log "installing google-chrome-stable"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] sudo apt-get update\n'
+    printf '[dry-run] sudo apt-get install -y google-chrome-stable\n'
+    return 0
+  fi
+
+  sudo apt-get update
+  sudo apt-get install -y google-chrome-stable
 }
 
 install_rustup() {
@@ -334,6 +405,12 @@ parse_args() {
       --dotfiles-only)
         DOTFILES_ONLY=1
         ;;
+      --with-brave)
+        WITH_BRAVE=1
+        ;;
+      --with-chrome)
+        WITH_CHROME=1
+        ;;
       --force)
         FORCE=1
         ;;
@@ -364,6 +441,12 @@ main() {
     need_sudo
     install_apt_packages
     install_docker
+    if [ "$WITH_BRAVE" -eq 1 ]; then
+      install_brave
+    fi
+    if [ "$WITH_CHROME" -eq 1 ]; then
+      install_chrome
+    fi
     install_rustup
     install_pyenv
     install_uv

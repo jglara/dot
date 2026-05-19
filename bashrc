@@ -68,11 +68,13 @@ unset GIT_PS1_SHOWUPSTREAM
 
 if [ -n "${TERM:-}" ] && [ "${TERM#xterm}" != "${TERM}" ]; then
     PS1="\[\e]0;\u@\h: \w\a\]"
+else
+    PS1=""
 fi
 if command -v __git_ps1 >/dev/null 2>&1; then
-    PS1="${PS1:-}${GREEN}\u@\h${RESET}:${BLUE}\w${YELLOW}\$(__git_ps1 ' (%s)')${RESET}\$ "
+    PS1+="${GREEN}\u@\h${RESET}:${BLUE}\w${YELLOW}\$(__git_ps1 ' (%s)')${RESET}\$ "
 else
-    PS1="${PS1:-}${GREEN}\u@\h${RESET}:${BLUE}\w${RESET}\$ "
+    PS1+="${GREEN}\u@\h${RESET}:${BLUE}\w${RESET}\$ "
 fi
 
 [ -f "$HOME/.bashrc.local" ] && . "$HOME/.bashrc.local"
