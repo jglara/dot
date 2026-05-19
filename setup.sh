@@ -7,6 +7,9 @@ DRY_RUN=0
 PACKAGES_ONLY=0
 DOTFILES_ONLY=0
 FORCE=0
+OS_ID=""
+OS_CODENAME=""
+ARCH=""
 
 APT_PACKAGES=(
   bash-completion
@@ -37,6 +40,7 @@ APT_PACKAGES=(
   npm
   pkg-config
   ripgrep
+  software-properties-common
   tk-dev
   tmux
   unzip
@@ -44,6 +48,14 @@ APT_PACKAGES=(
   xclip
   xz-utils
   zlib1g-dev
+)
+
+DOCKER_PACKAGES=(
+  containerd.io
+  docker-buildx-plugin
+  docker-ce
+  docker-ce-cli
+  docker-compose-plugin
 )
 
 usage() {
@@ -81,6 +93,14 @@ run_shell() {
   bash -lc "$*"
 }
 
+run_sudo_shell() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] sudo bash -lc %q\n' "$*"
+    return 0
+  fi
+  sudo bash -lc "$*"
+}
+
 require_ubuntu_or_debian() {
   if [ ! -r /etc/os-release ]; then
     printf 'Unsupported system: missing /etc/os-release\n' >&2
@@ -90,12 +110,22 @@ require_ubuntu_or_debian() {
   # shellcheck disable=SC1091
   . /etc/os-release
   case "${ID:-}" in
-    ubuntu|debian) ;;
+    ubuntu|debian)
+      OS_ID="$ID"
+      OS_CODENAME="${VERSION_CODENAME:-}"
+      ;;
     *)
       printf 'Unsupported distribution: %s\n' "${ID:-unknown}" >&2
       exit 1
       ;;
   esac
+
+  if [ -z "$OS_CODENAME" ]; then
+    printf 'Unable to determine distribution codename\n' >&2
+    exit 1
+  fi
+
+  ARCH="$(dpkg --print-architecture)"
 }
 
 need_sudo() {
@@ -131,6 +161,73 @@ install_apt_packages() {
 
   sudo apt-get update
   sudo apt-get install -y "${missing[@]}"
+}
+
+ensure_docker_repo() {
+  local keyring='/etc/apt/keyrings/docker.asc'
+  local repo_file='/etc/apt/sources.list.d/docker.list'
+  local repo_line="deb [arch=${ARCH} signed-by=${keyring}] https://download.docker.com/linux/${OS_ID} ${OS_CODENAME} stable"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] sudo install -m 0755 -d /etc/apt/keyrings\n'
+    printf '[dry-run] curl -fsSL https://download.docker.com/linux/%s/gpg | sudo gpg --dearmor? no, using ascii keyring at %s\n' "$OS_ID" "$keyring"
+    printf '[dry-run] sudo tee %s >/dev/null <<< %q\n' "$repo_file" "$repo_line"
+    return 0
+  fi
+
+  sudo install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL "https://download.docker.com/linux/${OS_ID}/gpg" | sudo tee "$keyring" >/dev/null
+  sudo chmod a+r "$keyring"
+  printf '%s\n' "$repo_line" | sudo tee "$repo_file" >/dev/null
+}
+
+install_docker() {
+  local missing=()
+  local pkg
+
+  for pkg in "${DOCKER_PACKAGES[@]}"; do
+    if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+      missing+=("$pkg")
+    fi
+  done
+
+  ensure_docker_repo
+
+  if [ "${#missing[@]}" -eq 0 ]; then
+    log "docker packages already installed"
+  else
+    log "installing docker packages: ${missing[*]}"
+    if [ "$DRY_RUN" -eq 1 ]; then
+      printf '[dry-run] sudo apt-get update\n'
+      printf '[dry-run] sudo apt-get install -y'
+      printf ' %q' "${missing[@]}"
+      printf '\n'
+    else
+      sudo apt-get update
+      sudo apt-get install -y "${missing[@]}"
+    fi
+  fi
+
+  if getent group docker >/dev/null 2>&1; then
+    log "docker group already exists"
+  else
+    log "creating docker group"
+    run sudo groupadd docker
+  fi
+
+  if id -nG "$USER" | tr ' ' '\n' | grep -Fxq docker; then
+    log "user $USER already in docker group"
+  else
+    log "adding $USER to docker group"
+    run sudo usermod -aG docker "$USER"
+    log "log out and back in to use docker without sudo"
+  fi
+
+  if [ "$DRY_RUN" -eq 0 ]; then
+    run sudo systemctl enable --now docker
+  else
+    printf '[dry-run] sudo systemctl enable --now docker\n'
+  fi
 }
 
 install_rustup() {
@@ -266,6 +363,7 @@ main() {
   if [ "$DOTFILES_ONLY" -ne 1 ]; then
     need_sudo
     install_apt_packages
+    install_docker
     install_rustup
     install_pyenv
     install_uv

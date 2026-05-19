@@ -10,6 +10,9 @@ This repo manages:
 - `~/.config/kitty/kitty.conf`
 - `~/.emacs.d` -> repo `emacs/`
 
+The bootstrap installs a core development stack including Docker, Git, tmux,
+kitty, Emacs, C/C++ tooling, `pyenv`, `uv`, and `rustup`.
+
 Secrets and machine-specific settings stay out of git. Use the example local
 override files to add personal identity, CUDA paths, aliases, or host-specific
 environment changes.
@@ -39,3 +42,10 @@ The bootstrap creates these files if they do not already exist:
 - `~/.gitconfig.local`
 
 Edit them for values that should not be committed.
+
+## Docker
+
+Docker is installed from Docker's official apt repository. The script also adds
+your user to the `docker` group and enables the Docker service.
+
+After a fresh install, log out and back in before using `docker` without `sudo`.
