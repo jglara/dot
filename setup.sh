@@ -321,6 +321,16 @@ install_rustup() {
   run_shell 'curl https://sh.rustup.rs -sSf | sh -s -- -y'
 }
 
+install_rust_components() {
+  if ! command -v rustup >/dev/null 2>&1; then
+    log "rustup not found; skipping Rust components"
+    return 0
+  fi
+
+  log "installing Rust components"
+  run rustup component add rustfmt clippy rust-analyzer
+}
+
 install_pyenv() {
   if [ -d "$HOME/.pyenv" ]; then
     log "pyenv already installed"
@@ -458,6 +468,7 @@ main() {
       install_chrome
     fi
     install_rustup
+    install_rust_components
     install_pyenv
     install_uv
   fi

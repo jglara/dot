@@ -78,3 +78,4 @@ else
 fi
 
 [ -f "$HOME/.bashrc.local" ] && . "$HOME/.bashrc.local"
+export PATH=~/.npm-global/bin:$PATH
