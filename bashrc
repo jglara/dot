@@ -48,8 +48,17 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 
 if command -v kubectl >/dev/null 2>&1; then
+    if ! declare -F __start_kubectl >/dev/null 2>&1; then
+        source <(kubectl completion bash) 2>/dev/null || true
+    fi
     alias k='kubectl'
     complete -o default -F __start_kubectl k 2>/dev/null || true
+fi
+
+if command -v helm >/dev/null 2>&1; then
+    if ! declare -F __start_helm >/dev/null 2>&1; then
+        source <(helm completion bash) 2>/dev/null || true
+    fi
 fi
 
 if [ -f "$HOME/.git-prompt.sh" ]; then

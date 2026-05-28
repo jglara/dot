@@ -9,6 +9,7 @@ DOTFILES_ONLY=0
 FORCE=0
 WITH_BRAVE=0
 WITH_CHROME=0
+WITH_K8S=0
 OS_ID=""
 OS_CODENAME=""
 ARCH=""
@@ -61,6 +62,12 @@ DOCKER_PACKAGES=(
   docker-compose-plugin
 )
 
+K8S_RECOMMENDED_APT_PACKAGES=(
+  ansible
+  kubectx
+  python3-kubernetes
+)
+
 usage() {
   cat <<'USAGE'
 Usage: ./setup.sh [options]
@@ -71,6 +78,7 @@ Options:
   --dotfiles-only  Create local examples and symlink dotfiles only
   --with-brave     Install Brave Browser from Brave's official apt repository
   --with-chrome    Install Google Chrome from Google's official apt repository
+  --with-k8s       Install kubectl, Helm, K9s, and related Kubernetes tools
   --force          Replace conflicting files without keeping a backup
   -h, --help       Show this help
 USAGE
@@ -235,6 +243,146 @@ install_docker() {
   else
     printf '[dry-run] sudo systemctl enable --now docker\n'
   fi
+}
+
+
+get_kubernetes_minor() {
+  local stable_release
+
+  if [ -n "${KUBERNETES_MINOR:-}" ]; then
+    printf '%s\n' "$KUBERNETES_MINOR"
+    return 0
+  fi
+
+  stable_release="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+  printf '%s\n' "${stable_release%.*}"
+}
+
+ensure_kubernetes_repo() {
+  local keyring='/etc/apt/keyrings/kubernetes-apt-keyring.gpg'
+  local repo_file='/etc/apt/sources.list.d/kubernetes.list'
+  local k8s_minor
+  local repo_line
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    k8s_minor="${KUBERNETES_MINOR:-vX.Y}"
+  else
+    k8s_minor="$(get_kubernetes_minor)"
+  fi
+  repo_line="deb [signed-by=${keyring}] https://pkgs.k8s.io/core:/stable:/${k8s_minor}/deb/ /"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] sudo install -m 0755 -d /etc/apt/keyrings\n'
+    printf '[dry-run] curl -fsSL https://pkgs.k8s.io/core:/stable:/%s/deb/Release.key | sudo gpg --dearmor --yes -o %s\n' "$k8s_minor" "$keyring"
+    printf '[dry-run] sudo tee %s >/dev/null <<< %q\n' "$repo_file" "$repo_line"
+    return 0
+  fi
+
+  sudo install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL "https://pkgs.k8s.io/core:/stable:/${k8s_minor}/deb/Release.key" | sudo gpg --dearmor --yes -o "$keyring"
+  printf '%s\n' "$repo_line" | sudo tee "$repo_file" >/dev/null
+}
+
+ensure_helm_repo() {
+  local keyring='/usr/share/keyrings/helm.gpg'
+  local repo_file='/etc/apt/sources.list.d/helm-stable-debian.list'
+  local repo_line="deb [signed-by=${keyring}] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey | gpg --dearmor | sudo tee %s >/dev/null\n' "$keyring"
+    printf '[dry-run] sudo tee %s >/dev/null <<< %q\n' "$repo_file" "$repo_line"
+    return 0
+  fi
+
+  curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey | gpg --dearmor | sudo tee "$keyring" >/dev/null
+  printf '%s\n' "$repo_line" | sudo tee "$repo_file" >/dev/null
+}
+
+install_k8s_apt_packages() {
+  local missing=()
+  local packages=(kubectl helm "${K8S_RECOMMENDED_APT_PACKAGES[@]}")
+  local pkg
+
+  ensure_kubernetes_repo
+  ensure_helm_repo
+
+  for pkg in "${packages[@]}"; do
+    if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+      missing+=("$pkg")
+    fi
+  done
+
+  if [ "${#missing[@]}" -eq 0 ]; then
+    log "kubernetes apt packages already installed"
+    return 0
+  fi
+
+  log "installing kubernetes apt packages: ${missing[*]}"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] sudo apt-get update\n'
+    printf '[dry-run] sudo apt-get install -y'
+    printf ' %q' "${missing[@]}"
+    printf '\n'
+    return 0
+  fi
+
+  sudo apt-get update
+  sudo apt-get install -y "${missing[@]}"
+}
+
+install_k9s() {
+  local k9s_arch
+  local deb_path
+
+  if command -v k9s >/dev/null 2>&1; then
+    log "k9s already installed"
+    return 0
+  fi
+
+  case "$ARCH" in
+    amd64|arm64)
+      k9s_arch="$ARCH"
+      ;;
+    *)
+      printf 'K9s install is only supported by this script on amd64 and arm64\n' >&2
+      exit 1
+      ;;
+  esac
+
+  deb_path="/tmp/k9s_linux_${k9s_arch}.deb"
+  log "installing k9s"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] curl -fsSL -o %s https://github.com/derailed/k9s/releases/latest/download/k9s_linux_%s.deb\n' "$deb_path" "$k9s_arch"
+    printf '[dry-run] sudo apt-get install -y %s\n' "$deb_path"
+    printf '[dry-run] rm -f %s\n' "$deb_path"
+    return 0
+  fi
+
+  curl -fsSL -o "$deb_path" "https://github.com/derailed/k9s/releases/latest/download/k9s_linux_${k9s_arch}.deb"
+  sudo apt-get install -y "$deb_path"
+  rm -f "$deb_path"
+}
+
+install_k8s_completion() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl >/dev/null\n'
+    printf '[dry-run] helm completion bash | sudo tee /etc/bash_completion.d/helm >/dev/null\n'
+    return 0
+  fi
+
+  if command -v kubectl >/dev/null 2>&1; then
+    kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl >/dev/null
+  fi
+
+  if command -v helm >/dev/null 2>&1; then
+    helm completion bash | sudo tee /etc/bash_completion.d/helm >/dev/null
+  fi
+}
+
+install_k8s_tools() {
+  install_k8s_apt_packages
+  install_k9s
+  install_k8s_completion
 }
 
 ensure_brave_repo() {
@@ -431,6 +579,9 @@ parse_args() {
       --with-chrome)
         WITH_CHROME=1
         ;;
+      --with-k8s)
+        WITH_K8S=1
+        ;;
       --force)
         FORCE=1
         ;;
@@ -466,6 +617,9 @@ main() {
     fi
     if [ "$WITH_CHROME" -eq 1 ]; then
       install_chrome
+    fi
+    if [ "$WITH_K8S" -eq 1 ]; then
+      install_k8s_tools
     fi
     install_rustup
     install_rust_components
